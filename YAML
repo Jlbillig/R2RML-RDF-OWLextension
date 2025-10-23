@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: OntoSpreadEd Symbol Table API
+  version: 1.0.0
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+
+  /search:
+    get:
+      summary: Autocomplete/search across ontology terms
+      parameters:
+        - in: query
+          name: q
+          description: Query string (label, altLabel, IRI, localName)
+          required: true
+          schema: { type: string, minLength: 1 }
+        - in: query
+          name: type
+          description: Filter by term type
+          required: false
+          schema:
+            type: string
+            enum: [All, Class, Property, ObjectProperty, DatatypeProperty, AnnotationProperty, Individual]
+            default: All
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TermSummary'
+        "400": { description: Bad request }
+
+  /term/{iri}:
+    get:
+      summary: Fetch the full symbol-table entry for a specific IRI
+      parameters:
+        - in: path
+          name: iri
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Full term entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TermFull'
+        "404": { description: Not found }
+
+  /validate:
+    post:
+      summary: Validate a term (or a candidate mapping) against the symbol table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponse'
+        "400": { description: Bad request }
+
+components:
+  schemas:
+    TermSummary:
+      type: object
+      properties:
+        iri: { type: string }
+        types:
+          type: array
+          items: { type: string }
+          description: E.g., Class, ObjectProperty, DatatypeProperty, AnnotationProperty, Individual
+        label: { type: string, nullable: true }
+        comment: { type: string, nullable: true }
+        sourceFile: { type: string, nullable: true }
+        domainPreview:
+          type: array
+          items: { type: string }
+          description: First few domain IRIs if property (preview only)
+        rangePreview:
+          type: array
+          items: { type: string }
+          description: First few range IRIs if property (preview only)
+
+    Expr:
+      description: Structural summary of OWL expressions
+      type: object
+      properties:
+        exprType:
+          type: string
+          enum: [Named, Restriction, Intersection, Union, Complement, OneOf, DatatypeRestriction, Literal, BNode, Unknown]
+        iri: { type: string, nullable: true }
+        onProperty: { type: string, nullable: true }
+        someValuesFrom: { $ref: '#/components/schemas/Expr' }
+        allValuesFrom: { $ref: '#/components/schemas/Expr' }
+        hasValue: { $ref: '#/components/schemas/Expr' }
+        minCardinality: { type: integer, nullable: true }
+        maxCardinality: { type: integer, nullable: true }
+        cardinality: { type: integer, nullable: true }
+        minQualifiedCardinality: { type: integer, nullable: true }
+        maxQualifiedCardinality: { type: integer, nullable: true }
+        qualifiedCardinality: { type: integer, nullable: true }
+        onClass: { $ref: '#/components/schemas/Expr' }
+        operands:
+          type: array
+          items: { $ref: '#/components/schemas/Expr' }
+        operand: { $ref: '#/components/schemas/Expr' }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/Expr' }
+        props:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+    TermFull:
+      type: object
+      properties:
+        iri: { type: string }
+        types:
+          type: array
+          items: { type: string }
+        labels:
+          type: array
+          items: { type: string }
+        altLabels:
+          type: array
+          items: { type: string }
+        comments:
+          type: array
+          items: { type: string }
+        annotations:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        domains:
+          type: array
+          items: { type: string }
+        ranges:
+          type: array
+          items: { type: string }
+        subPropertyOf:
+          type: array
+          items: { type: string }
+        inverseOf:
+          type: array
+          items: { type: string }
+        propertyCharacteristics:
+          type: array
+          items:
+            type: string
+            enum: [Functional, InverseFunctional, Transitive, Symmetric, Asymmetric, Reflexive, Irreflexive]
+        subClassOf:
+          type: array
+          items: { $ref: '#/components/schemas/Expr' }
+        equivalentClass:
+          type: array
+          items: { $ref: '#/components/schemas/Expr' }
+        individualTypes:
+          type: array
+          items: { type: string }
+        sourceFile: { type: string, nullable: true }
+
+    ValidationRequest:
+      type: object
+      required: [ iri ]
+      properties:
+        iri: { type: string }
+        subjectTypes:
+          type: array
+          items: { type: string }
+          description: Optional candidate subject class IRIs (when validating a property use)
+        objectTypes:
+          type: array
+          items: { type: string }
+          description: Optional candidate object class IRIs (when validating a property use)
+        datatype:
+          type: string
+          description: Optional XSD datatype if validating a DatatypeProperty binding
+        mode:
+          type: string
+          enum: [STRICT, PERMISSIVE]
+          default: STRICT
+
+    ValidationIssue:
+      type: object
+      properties:
+        severity:
+          type: string
+          enum: [error, warning, info]
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ValidationResponse:
+      type: object
+      properties:
+        inSymbolTable: { type: boolean }
+        types:
+          type: array
+          items: { type: string }
+        domains:
+          type: array
+          items: { type: string }
+        ranges:
+          type: array
+          items: { type: string }
+        annotations:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        anonExprSummary:
+          type: array
+          items: { $ref: '#/components/schemas/Expr' }
+        propertyCharacteristics:
+          type: array
+          items: { type: string }
+        valid: { type: boolean }
+        issues:
+          type: array
+          items: { $ref: '#/components/schemas/ValidationIssue' }
+        recommendedPattern:
+          type: string
+          nullable: true
+          description: One of: Participation, Partonomy, Measurement, Reference
