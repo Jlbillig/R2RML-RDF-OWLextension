@@ -1,0 +1,5 @@
+sheets/
+  sharkattacks.csv
+ontologies/
+  CommonCoreOntologiesMerged.ttl
+  bfo-core.ttl
