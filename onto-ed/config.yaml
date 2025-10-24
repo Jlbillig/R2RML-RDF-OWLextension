@@ -1,0 +1,30 @@
+# A minimal OntoSpreadEd repo config
+
+name: R2RML-RDF-OWLextension
+
+sheets:
+  # Tell the app where your spreadsheets live and what each sheet is for.
+  # Add one entry per CSV you want to edit in the UI.
+  - path: sheets/entities.csv
+    kind: entities         # classes / terms / individuals
+    key: id                # unique column in the CSV
+  - path: sheets/relations.csv
+    kind: relations        # object/data property assertions, axioms, mappings
+    key: id
+
+prefixes:
+  rdf:  "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  rdfs: "http://www.w3.org/2000/01/rdf-schema#"
+  owl:  "http://www.w3.org/2002/07/owl#"
+  xsd:  "http://www.w3.org/2001/XMLSchema#"
+  bfo:  "http://purl.obolibrary.org/obo/BFO_"
+  cco:  "http://www.ontologyrepository.com/CommonCoreOntologies/"
+
+# Optional: local or remote ontologies to reference/validate against
+external-ontologies:
+  - path: ontologies/CommonCoreOntologiesMerged.ttl   # or a URL
+  - path: ontologies/bfo.owl
+
+# Optional: where to drop releases/exports if you use the release flow
+release:
+  out-dir: build/release
