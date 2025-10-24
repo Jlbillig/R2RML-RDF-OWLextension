@@ -1,5 +1,6 @@
 sheets/
   sharkattacks.csv
+  ccosymbol.json
 ontologies/
   CommonCoreOntologiesMerged.ttl
   bfo-core.ttl
